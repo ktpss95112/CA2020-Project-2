@@ -3,7 +3,6 @@
 `include "ALU.v"
 `include "Control.v"
 // `include "Instruction_Memory.v"
-// `include "Data_Memory.v"
 `include "MUX32.v"
 // `include "PC.v"
 // `include "Registers.v"
@@ -12,17 +11,33 @@
 `include "Pipeline_Registers.v"
 `include "BEQ_Detection.v"
 `include "Forwarding.v"
+`include "dcache_controller.v"
 
 module CPU (
     clk_i,
     rst_i,
-    start_i
+    start_i,
+
+    // for data memory
+    mem_data_i,
+    mem_ack_i,
+    mem_data_o,
+    mem_addr_o,
+    mem_enable_o,
+    mem_write_o
 );
 
 // Ports
 input clk_i;
 input rst_i;
 input start_i;
+
+input           mem_ack_i;
+input   [255:0] mem_data_i;
+output  [31:0]  mem_addr_o;
+output  [255:0] mem_data_o;
+output          mem_enable_o;
+output          mem_write_o;
 
 
 wire Flush;
@@ -46,6 +61,7 @@ PC PC(
     .clk_i      (clk_i),
     .rst_i      (rst_i),
     .start_i    (start_i),
+    .stall_i    (dcache.cpu_stall_o),
     .PCWrite_i  (Hazard_Detection.PCWrite_o),
     .pc_i       (PC_Source.data_o),
     .pc_o       ()
@@ -61,7 +77,7 @@ PipelineRegIFID IFID(
     .rst_i      (rst_i),
     .instr_i    (Instruction_Memory.instr_o),
     .pc_i       (PC.pc_o),
-    .stall_i    (Hazard_Detection.Stall_o),
+    .stall_i    (Hazard_Detection.Stall_o | dcache.cpu_stall_o),
     .flush_i    (Flush),
     .instr_o    (),
     .pc_o       ()
@@ -111,6 +127,7 @@ Sign_Extend ImmGen(
 PipelineRegIDEX IDEX(
     .clk_i      (clk_i),
     .rst_i      (rst_i),
+    .stall_i    (dcache.cpu_stall_o),
     .RegWrite_i (Control.RegWrite_o),
     .MemtoReg_i (Control.MemtoReg_o),
     .MemRead_i  (Control.MemRead_o),
@@ -156,6 +173,7 @@ ALU_Control ALU_Control(
 PipelineRegEXMEM EXMEM(
     .clk_i          (clk_i),
     .rst_i          (rst_i),
+    .stall_i        (dcache.cpu_stall_o),
     .RegWrite_i     (IDEX.RegWrite_o),
     .MemtoReg_i     (IDEX.MemtoReg_o),
     .MemRead_i      (IDEX.MemtoReg_o),
@@ -172,22 +190,44 @@ PipelineRegEXMEM EXMEM(
     .RDaddr_o       ()
 );
 
-Data_Memory Data_Memory(
-    .clk_i      (clk_i),
-    .addr_i     (EXMEM.ALUResult_o),
-    .MemRead_i  (EXMEM.MemRead_o),
-    .MemWrite_i (EXMEM.MemWrite_o),
-    .data_i     (EXMEM.RS2data_o),
-    .data_o     ()
+// Data_Memory Data_Memory(
+//     .clk_i      (clk_i),
+//     .addr_i     (EXMEM.ALUResult_o),
+//     .MemRead_i  (EXMEM.MemRead_o),
+//     .MemWrite_i (EXMEM.MemWrite_o),
+//     .data_i     (EXMEM.RS2data_o),
+//     .data_o     ()
+// );
+
+dcache_controller dcache(
+    .clk_i          (clk_i),
+    .rst_i          (rst_i),
+
+    // to Data Memory interface
+    .mem_data_i     (mem_data_i),
+    .mem_ack_i      (mem_ack_i),
+    .mem_data_o     (mem_data_o),
+    .mem_addr_o     (mem_addr_o),
+    .mem_enable_o   (mem_enable_o),
+    .mem_write_o    (mem_write_o),
+
+    // to CPU interface
+    .cpu_data_i     (EXMEM.RS2data_o),
+    .cpu_addr_i     (EXMEM.ALUResult_o),
+    .cpu_MemRead_i  (EXMEM.MemRead_o),
+    .cpu_MemWrite_i (EXMEM.MemWrite_o),
+    .cpu_data_o     (),
+    .cpu_stall_o    ()
 );
 
 PipelineRegMEMWB MEMWB(
     .clk_i          (clk_i),
     .rst_i          (rst_i),
+    .stall_i        (dcache.cpu_stall_o),
     .RegWrite_i     (EXMEM.RegWrite_o),
     .MemtoReg_i     (EXMEM.MemtoReg_o),
     .ALUResult_i    (EXMEM.ALUResult_o),
-    .Memdata_i      (Data_Memory.data_o),
+    .Memdata_i      (dcache.cpu_data_o),
     .RDaddr_i       (EXMEM.RDaddr_o),
     .RegWrite_o     (),
     .Memdata_o      (),
