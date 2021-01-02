@@ -111,7 +111,7 @@ assign    cache_sram_index  = cpu_index;
 assign    cache_sram_enable = cpu_req;
 assign    cache_sram_write  = cache_write | write_hit;
 assign    cache_sram_tag    = {1'b1, cache_dirty, cpu_tag};
-assign    cache_sram_data   = w_hit_data;
+assign    cache_sram_data   = (hit) ? w_hit_data : mem_data_i;
 
 // to Data_Memory interface
 assign    mem_enable_o = mem_enable;
@@ -123,8 +123,7 @@ assign    write_hit    = hit & cpu_MemWrite_i;
 assign    cache_dirty  = write_hit;
 
 // TODO: add your code here!  (r_hit_data=...?)
-reg     ack_on_prev_cycle;
-assign  r_hit_data = (ack_on_prev_cycle) ? mem_data_i : sram_cache_data;
+assign  r_hit_data = sram_cache_data;
 // read data :  256-bit to 32-bit
 always@(cpu_offset or r_hit_data) begin
     // TODO: add your code here! (cpu_data=...?)
@@ -148,24 +147,20 @@ always@(posedge clk_i or posedge rst_i) begin
         mem_write   <= 1'b0;
         cache_write <= 1'b0;
         write_back  <= 1'b0;
-        ack_on_prev_cycle <= 1'b0;
     end
     else begin
         case(state)
             STATE_IDLE: begin
                 if(cpu_req && !hit) begin      // wait for request
-                    ack_on_prev_cycle <= 1'b0;
                     state <= STATE_MISS;
                 end
                 else begin
-                    ack_on_prev_cycle <= 1'b0;
                     state <= STATE_IDLE;
                 end
             end
             STATE_MISS: begin
                 if(sram_dirty) begin          // write back if dirty
                     // TODO: add your code here!
-                    ack_on_prev_cycle <= 1'b0;
                     mem_enable  <= 1;
                     mem_write   <= 1;
                     write_back  <= 1;
@@ -174,7 +169,6 @@ always@(posedge clk_i or posedge rst_i) begin
                 end
                 else begin                    // write allocate: write miss = read miss + write hit; read miss = read miss + read hit
                     // TODO: add your code here!
-                    ack_on_prev_cycle <= 1'b0;
                     mem_enable  <= 1;
                     mem_write   <= 0;
                     write_back  <= 0;
@@ -185,7 +179,6 @@ always@(posedge clk_i or posedge rst_i) begin
             STATE_READMISS: begin
                 if(mem_ack_i) begin            // wait for data memory acknowledge
                     // TODO: add your code here!
-                    ack_on_prev_cycle <= 1'b1;
                     mem_enable  <= 0;
                     mem_write   <= 0;
                     write_back  <= 0;
@@ -194,13 +187,11 @@ always@(posedge clk_i or posedge rst_i) begin
                 end
                 else begin
                     // mem_enable  <= 0;
-                    ack_on_prev_cycle <= 1'b0;
                     state <= STATE_READMISS;
                 end
             end
             STATE_READMISSOK: begin            // wait for data memory acknowledge
                 // TODO: add your code here!
-                ack_on_prev_cycle <= 1'b0;
                 mem_enable  <= 0;
                 mem_write   <= 0;
                 write_back  <= 0;
@@ -210,7 +201,6 @@ always@(posedge clk_i or posedge rst_i) begin
             STATE_WRITEBACK: begin
                 if(mem_ack_i) begin            // wait for data memory acknowledge
                     // TODO: add your code here!
-                    ack_on_prev_cycle <= 1'b1;
                     mem_enable  <= 1;
                     mem_write   <= 0;
                     write_back  <= 0;
@@ -219,7 +209,6 @@ always@(posedge clk_i or posedge rst_i) begin
                 end
                 else begin
                     // mem_enable  <= 0;
-                    ack_on_prev_cycle <= 1'b0;
                     state <= STATE_WRITEBACK;
                 end
             end
