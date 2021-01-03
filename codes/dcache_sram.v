@@ -49,6 +49,9 @@ assign  hit[1]  = tag[addr_i][1][24] & (tag[addr_i][1][22:0] == tag_i[22:0]);
 assign  select  = (hit[0]) ? 0 :
                   (hit[1]) ? 1 : to_be_replaced[addr_i];
 
+wire    [255:0]  debug;
+assign  debug = data[0][0];
+
 // Read Data
 // TODO: tag_o=? data_o=? hit_o=?
 assign  hit_o   = hit[0] | hit[1];
@@ -73,8 +76,11 @@ always@(posedge clk_i or posedge rst_i) begin
         // TODO: Handle your write of 2-way associative cache + LRU here
         if (write_i) begin
             // forcefully write the data
-            data[addr_i][to_be_replaced[addr_i]] <= data_i;
-            to_be_replaced[addr_i] <= ~to_be_replaced[addr_i];
+            data[addr_i][select] <= data_i;
+            tag[addr_i][select][22:0] <= tag_i[22:0];
+            tag[addr_i][select][23] <= 1; // dirty
+            tag[addr_i][select][24] <= 1; // valid
+            to_be_replaced[addr_i] <= ~select;
         end
         else if (hit_o) begin
             // hit

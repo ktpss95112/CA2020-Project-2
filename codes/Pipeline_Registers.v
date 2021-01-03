@@ -45,6 +45,7 @@ endmodule
 module PipelineRegIDEX (
     clk_i,
     rst_i,
+    stall_i,
     RegWrite_i,
     MemtoReg_i,
     MemRead_i,
@@ -70,6 +71,7 @@ module PipelineRegIDEX (
 
 input                         clk_i;
 input                         rst_i;
+input                         stall_i;
 input                         RegWrite_i;
 input                         MemtoReg_i;
 input                         MemRead_i;
@@ -111,6 +113,9 @@ always@(posedge clk_i or posedge rst_i) begin
         RS1addr_o   <= 5'b0;
         RS2addr_o   <= 5'b0;
     end
+    else if (stall_i) begin
+
+    end
     else begin
         RegWrite_o  <= RegWrite_i;
         MemtoReg_o  <= MemtoReg_i;
@@ -132,6 +137,7 @@ endmodule
 module PipelineRegEXMEM (
     clk_i,
     rst_i,
+    stall_i,
     RegWrite_i,
     MemtoReg_i,
     MemRead_i,
@@ -151,6 +157,7 @@ module PipelineRegEXMEM (
 
 input                  clk_i;
 input                  rst_i;
+input                  stall_i;
 input                  start_i;
 input       [31:0]     ALUResult_i;
 input       [31:0]     RS2data_i;
@@ -178,6 +185,9 @@ always@(posedge clk_i or posedge rst_i) begin
         RegWrite_o      <=   1'b0;
         RDaddr_o        <=   5'b0;
     end
+    else if (stall_i) begin
+
+    end
     else begin
         ALUResult_o     <=   ALUResult_i;
         RS2data_o       <=   RS2data_i;
@@ -194,6 +204,7 @@ endmodule
 module PipelineRegMEMWB (
     clk_i,
     rst_i,
+    stall_i,
     RegWrite_i,
     MemtoReg_i,
     ALUResult_i,
@@ -209,6 +220,7 @@ module PipelineRegMEMWB (
 
 input                   clk_i;
 input                   rst_i;
+input                   stall_i;
 input                   RegWrite_i;
 input                   MemtoReg_i;
 input       [31:0]      ALUResult_i;
@@ -228,6 +240,9 @@ always@(posedge clk_i or posedge rst_i) begin
         ALUResult_o     <=   32'b0;
         MemtoReg_o      <=   1'b0;
         RDaddr_o        <=   5'b0;
+    end
+    else if (stall_i) begin
+
     end
     else begin
         RegWrite_o      <=   RegWrite_i;
