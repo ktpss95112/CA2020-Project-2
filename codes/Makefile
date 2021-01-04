@@ -1,7 +1,7 @@
 all: CPU.out
 
 clean:
-	rm -f CPU.out CPU.vcd output.txt
+	rm -f CPU.out CPU.vcd output.txt cache.txt
 
 CPU.out: *.v
 	iverilog -Wall *.v -o CPU.out
