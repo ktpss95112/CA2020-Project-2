@@ -75,9 +75,7 @@ always@(posedge clk_i or posedge rst_i) begin
         if (write_i) begin
             // forcefully write the data
             data[addr_i][select] <= data_i;
-            tag[addr_i][select][22:0] <= tag_i[22:0];
-            tag[addr_i][select][23] <= 1; // dirty
-            tag[addr_i][select][24] <= 1; // valid
+            tag[addr_i][select] <= tag_i;
             to_be_replaced[addr_i] <= ~select;
         end
         else if (hit_o) begin
