@@ -1,8 +1,6 @@
 `ifndef DCACHE_SRAM_V
 `define DCACHE_SRAM_V
 
-`include "MUX32.v"
-
 module dcache_sram
 (
     clk_i,
